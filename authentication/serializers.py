@@ -22,12 +22,13 @@ class UserSerializer(serializers.ModelSerializer):
         username=validated_data.pop('username', None)
         bio=validated_data.pop('bio', None)
         role=validated_data.pop('role', None)
+        password = validated_data.pop('password') 
 
-        user=CustomUser(
-            full_name=validated_data["full_name"],
-            username=validated_data["username"]
+        user = CustomUser(
+        full_name=full_name,
+        username=username
         )
-        user.set_password(validated_data["password"])
+        user.set_password(password)
 
         if profile_image:
             user.profile_image =profile_image
@@ -48,10 +49,10 @@ class UserSerializer(serializers.ModelSerializer):
         role = validated_data.pop('role', None)
         bio=validated_data.pop('bio', None)
         username=validated_data.pop('username', None)
+        password = validated_data.pop('password', None)
         
-
-        if 'password' in validated_data:
-            instance.set_password(validated_data['password'])
+        if password:
+            instance.set_password(password)
         
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -75,7 +76,7 @@ class UserSerializer(serializers.ModelSerializer):
         return instance
     
 
-class UserProfile(serializers.ModelSerializer):
+class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model=CustomUser
         fields=['id','full_name','username','bio','profile_image','role']
