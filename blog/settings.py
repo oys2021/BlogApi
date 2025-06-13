@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-)r7d(#zfxizutscsjf=&ih40&0xgz-*moh5^)ryull!fmeac+_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['192.168.43.192','127.0.0.1']
 
 
 # Application definition
@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'authentication',
     'rest_framework',
     'corsheaders',
-    'drf_yasg'
+    'drf_yasg',
+    'core'
 ]
 
 MIDDLEWARE = [
@@ -58,7 +59,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'blog.urls'
 
-CORS_ALLOW_ALL_Origin = True
+CORS_ALLOW_ALL_ORIGINS   = True
 
 
 TEMPLATES = [
