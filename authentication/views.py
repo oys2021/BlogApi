@@ -37,14 +37,28 @@ def update_user(request,pk):
     )
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
 def user_profile(request):
-    user=CustomUser.objects.filter(username=request.user.username)
-    serializer= UserProfileSerializer(user,many=True)
-    return Response(
-            {"success":True,"data":serializer.data},
+    user = request.user
+
+    if request.method == "GET":
+        serializer = UserProfileSerializer([user], many=True, context={"request": request})
+        return Response(
+            {"success": True, "data": serializer.data},
             status=status.HTTP_200_OK
-    )
-    
+        )
+
+    elif request.method == "PUT":
+        serializer = UserProfileSerializer(user, data=request.data, partial=True, context={"request": request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"success": True, "message": "Profile updated successfully", "data": serializer.data},
+                status=status.HTTP_200_OK
+            )
+        return Response(
+            {"success": False, "message": "Invalid input", "errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
     

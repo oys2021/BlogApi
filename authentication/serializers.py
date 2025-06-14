@@ -77,10 +77,18 @@ class UserSerializer(serializers.ModelSerializer):
     
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    image_absolute_url = serializers.SerializerMethodField()
     class Meta:
         model=CustomUser
-        fields=['id','full_name','username','bio','profile_image','role']
+        fields=['id','full_name','username','bio','profile_image','image_absolute_url','role']
         read_only_fields = ['id']
+
+    def get_image_absolute_url(self,obj):
+        request=self.context.get('request')
+
+        if obj.profile_image and request:
+            return request.build_absolute_uri(obj.profile_image.url)
+        return None
 
 
 
