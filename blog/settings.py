@@ -28,8 +28,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-dev-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = config('DEBUG', default=False, cast=bool)
-DEBUG=True
+DEBUG = config('DEBUG', default=False, cast=bool)
+# DEBUG=True
 
 ALLOWED_HOSTS = ['*']
 # ALLOWED_HOSTS = ['192.168.43.192','127.0.0.1']
