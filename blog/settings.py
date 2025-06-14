@@ -77,6 +77,11 @@ CORS_ALLOW_HEADERS = [
 #     'https://web-production-011aa.up.railway.app/',
 # ]
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://web-production-011aa.up.railway.app',
+]
+
+
 
 TEMPLATES = [
     {
@@ -164,11 +169,13 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'profiles')
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
-    'DEFAULT_PERMISSION_CLASSES': [
+     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
 }
