@@ -120,9 +120,10 @@ WSGI_APPLICATION = 'blog.wsgi.application'
 # DATABASES = {
 #     'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
 # }
-
 DATABASES = {
-    'default': dj_database_url.config(default=config('DATABASE_URL'))
+    'default': dj_database_url.config(
+        default="postgresql://postgres:ZOrkaiNIjVxODntasepgqrOWZvNguoqP@interchange.proxy.rlwy.net:11883/railway"
+    )
 }
 
 
