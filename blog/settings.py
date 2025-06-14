@@ -80,7 +80,7 @@ CORS_ALLOW_HEADERS = [
 # ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://web-production-011aa.up.railway.app',
+    'https://tb.up.railway.app',
 ]
 
 
