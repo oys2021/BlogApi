@@ -7,6 +7,8 @@ admin.site.register(Tag)
 admin.site.register(PostTag)
 admin.site.register(Comment)
 admin.site.register(Like)
+admin.site.register(PostView)
+
 
 
 

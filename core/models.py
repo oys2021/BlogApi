@@ -35,6 +35,29 @@ class Post(models.Model):
 
     def __str__(self):
         return self.title
+    
+
+
+class Notification(models.Model):
+    title = models.CharField(max_length=100)
+    body = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def time_since_created(self):
+        from django.utils.timesince import timesince
+        return timesince(self.created_at) + " ago"
+    
+class NotificationReadStatus(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    notification = models.ForeignKey(Notification, on_delete=models.CASCADE)
+    read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('user', 'notification')
+
+
 
 
 class PostTag(models.Model):
@@ -43,6 +66,15 @@ class PostTag(models.Model):
 
     class Meta:
         unique_together = ('post', 'tag')
+
+class PostView(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'post')  
+
 
 
 class Comment(models.Model):

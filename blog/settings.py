@@ -21,18 +21,13 @@ from decouple import config
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
+
 SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-dev-key')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=False, cast=bool)
-# DEBUG=True
+DEBUG=False
 
 ALLOWED_HOSTS = ['*']
-# ALLOWED_HOSTS = ['192.168.43.192','127.0.0.1']
 
 
 
@@ -40,6 +35,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -50,7 +46,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'drf_yasg',
-    'core'
+    'core',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -75,12 +72,10 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
 ]
 
-# CSRF_TRUSTED_ORIGINS = [
-#     'https://web-production-011aa.up.railway.app/',
-# ]
+
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://web-production-011aa.up.railway.app',
+    'https://tb.up.railway.app/',
 ]
 
 
@@ -101,7 +96,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'blog.wsgi.application'
-
+ASGI_APPLICATION = 'blog.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -197,6 +192,13 @@ SWAGGER_SETTINGS = {
     'LOGIN_URL': None,
     'LOGOUT_URL': None,
 }
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
+
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
