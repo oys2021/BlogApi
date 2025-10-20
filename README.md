@@ -61,7 +61,7 @@ Note : connect to your prefered Database before applying migrations.This current
 ```
 5.**Run Server**
 ```bash
-python python manage.py runserver.
+python manage.py runserver.
 Note : run the development server
 ```
 
