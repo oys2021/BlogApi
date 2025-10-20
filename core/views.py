@@ -1,72 +1,92 @@
 from django.shortcuts import render
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view,permission_classes
-from rest_framework.permissions import AllowAny,IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from core.serializers import *
 from core.models import *
-from django.core.paginator import Paginator
-from rest_framework import generics, permissions
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from rest_framework import generics
 from django.shortcuts import get_object_or_404
-from django.db.models import Count
 from core.models import PostView
 from django.db.models import F
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.utils import timezone
 from rest_framework.views import APIView
+from django.db import transaction
+import logging
 
+logger = logging.getLogger(__name__)
 
+class APIHomeView(APIView):
+    def get(self, request):
+        return render(request, 'core/api_home.html')
 
+class PostListCreateView(generics.ListCreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PostSerializer
 
+    def get_queryset(self):
+        sort = self.request.GET.get("sort", "created_at")
+        filter_category = self.request.GET.get("filter", "all")
 
-def api_root(request):
-    return render(request, 'core/api_home.html')
-
-
-@api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
-def posts(request):
-    if request.method == "GET":
-        sort = request.GET.get("sort", "created_at")
-        filter_category = request.GET.get("filter", "all")
-
-        queryset = Post.objects.all()
-
-        
-        if filter_category != "all":
-            queryset = queryset.filter(category__slug=filter_category)
-
-
-        
         allowed_sorts = ["created_at", "view_count", "comment_count"]
-        if sort in allowed_sorts:
-            queryset = queryset.order_by(f"-{sort}")
+        if sort not in allowed_sorts:
+            sort = "created_at"
 
-        serializer = PostSerializer(queryset, many=True)
-        return Response(
-            {"success": True, "message": "Post results", "data": serializer.data},
-            status=status.HTTP_200_OK
-        )
+        queryset = Post.objects.select_related('author', 'category').prefetch_related('tags', 'comments')
 
+        if filter_category != "all":
+            if Category.objects.filter(slug=filter_category).exists():
+                queryset = queryset.filter(category__slug=filter_category)
 
-    elif request.method == "POST":
-        serializer = PostSerializer(data=request.data)
+        return queryset.order_by(f"-{sort}")
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        
+        page_number = request.GET.get('page', 1)
+        paginator = Paginator(queryset, 20)
+        
+        try:
+            posts_page = paginator.page(page_number)
+        except PageNotAnInteger:
+            posts_page = paginator.page(1)
+        except EmptyPage:
+            posts_page = paginator.page(paginator.num_pages)
+
+        serializer = self.get_serializer(posts_page, many=True)
+        return Response({
+            "success": True,
+            "message": "Post results",
+            "data": serializer.data,
+            "pagination": {
+                "current_page": posts_page.number,
+                "total_pages": paginator.num_pages,
+                "total_items": paginator.count
+            }
+        }, status=status.HTTP_200_OK)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
             post = serializer.save(author=request.user)
 
-            channel_layer = get_channel_layer()
-            async_to_sync(channel_layer.group_send)(
-                "chat_posts",  
-                {
-                    "type": "broadcast_message",
-                    "message": {
-                        "title": "New Post Created",
-                        "body": f"{request.user.username} published '{post.title}'",
-                        "post_id": post.id
+            try:
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    "chat_posts",
+                    {
+                        "type": "broadcast_message",
+                        "message": {
+                            "title": "New Post Created",
+                            "body": f"{request.user.username} published '{post.title}'",
+                            "post_id": post.id
+                        }
                     }
-                }
-            )
+                )
+            except Exception as e:
+                logger.error(f"WebSocket broadcast failed: {e}")
 
             return Response({
                 "success": True,
@@ -79,103 +99,100 @@ def posts(request):
             "errors": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
 
+class PostRetrieveUpdateView(generics.RetrieveUpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PostSerializer
+    queryset = Post.objects.select_related('author', 'category').prefetch_related('tags', 'comments')
 
-
-@api_view(['PUT','GET'])
-@permission_classes([IsAuthenticated])
-def post_detail(request, pk):
-    try:
-        post = Post.objects.get(pk=pk)
-    except Post.DoesNotExist:
-        return Response(
-            {"success": False, "message": "Post not found"},
-            status=status.HTTP_404_NOT_FOUND
-        )
-
-    if request.method == "GET":
+    def retrieve(self, request, *args, **kwargs):
+        post = self.get_object()
         user = request.user
 
-        if not PostView.objects.filter(user=user, post=post).exists():
-            PostView.objects.create(user=user, post=post)
-            Post.objects.filter(pk=pk).update(view_count=F('view_count') + 1)
+        with transaction.atomic():
+            view, created = PostView.objects.get_or_create(
+                user=user,
+                post=post,
+                defaults={'user': user, 'post': post}
+            )
+            
+            if created:
+                Post.objects.filter(pk=post.pk).update(view_count=F('view_count') + 1)
+                post.refresh_from_db()
 
-        serializer = PostSerializer(post)
-        return Response(
-            {"success": True, "message": "Post results", "data": serializer.data},
-            status=status.HTTP_200_OK
-        )
+        serializer = self.get_serializer(post)
+        return Response({
+            "success": True,
+            "message": "Post results",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
 
-    elif request.method == "PUT":
-        serializer = PostSerializer(post, data=request.data, partial=True)
+    def update(self, request, *args, **kwargs):
+        post = self.get_object()
+        
+        if post.author != request.user:
+            return Response({
+                "success": False,
+                "message": "You don't have permission to edit this post"
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = self.get_serializer(post, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            return Response(
-                {"success": True, "message": "Post updated successfully"},
-                status=status.HTTP_200_OK
-            )
-        return Response(
-            {"success": False, "message": "Invalid request input", "errors": serializer.errors},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+            return Response({
+                "success": True,
+                "message": "Post updated successfully"
+            }, status=status.HTTP_200_OK)
+            
+        return Response({
+            "success": False,
+            "message": "Invalid request input",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
+class CategoryListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CategorySerializer
+    queryset = Category.objects.all()
 
-    
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def category_list(request):
-    categories = Category.objects.all()
-    serializer = CategorySerializer(categories, many=True)
-    return Response(serializer.data)
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def tag_list(request):
-    tags = Tag.objects.all()
-    serializer = TagSerializer(tags, many=True)
-    return Response(serializer.data)
-
-
-
+class TagListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = TagSerializer
+    queryset = Tag.objects.all()
 
 class PostCommentListCreateView(generics.ListCreateAPIView):
     serializer_class = CommentSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         post_id = self.kwargs['post_id']
-        return Comment.objects.filter(post_id=post_id, parent=None).order_by('-created_at')
+        return Comment.objects.filter(post_id=post_id, parent=None).select_related('user', 'post').order_by('-created_at')
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
         post = get_object_or_404(Post, id=self.kwargs['post_id'])
         context['post'] = post
         return context
-    
-
-
 
 class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationSerializer
-    permission_classes = [permissions.IsAuthenticated]  
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Notification.objects.order_by('-created_at')[:10]
-
+        return Notification.objects.filter(user=self.request.user).select_related('user').order_by('-created_at')[:10]
 
 class UnreadNotificationListView(generics.ListAPIView):
     serializer_class = NotificationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Notification.objects.filter(
+            user=self.request.user,
             notificationreadstatus__user=self.request.user,
             notificationreadstatus__read=False
-        ).order_by('-created_at')
-    
+        ).select_related('user').order_by('-created_at')
 
 class MarkNotificationAsReadView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
         try:

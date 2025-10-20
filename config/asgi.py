@@ -13,7 +13,7 @@ from core.routing import websocket_urlpatterns
 
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'blog.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.base')
 
 application = ProtocolTypeRouter(
     {

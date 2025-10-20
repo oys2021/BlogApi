@@ -60,8 +60,14 @@ pip install -r requirements.txt
 python manage.py migrate.
 Note : connect to your prefered Database before applying migrations.This current code uses Postgresql
 ```
+5.**Run Server**
+```bash
+python python manage.py runserver.
+Note : run the development server
+```
 
-5. 📘 **Swagger Docs**
+
+ 📘 **Swagger Docs**
 Visit http://localhost:8000/api/docs/ for interactive Swagger documentation.
 
 To enable Swagger, make sure you've installed and configured drf-yasg.
