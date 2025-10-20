@@ -1,6 +1,6 @@
 # 📰 Real-Time Blog API with Django & WebSockets
 
-This project is a real-time blog API built with Django and Django REST Framework. It allows authenticated users to create, retrieve, and interact with posts, comments, categories, and notifications. Real-time WebSocket support enables instant post notification delivery to connected clients. This is the deployment link https://tb.up.railway.app
+This project is a real-time blog API built with Django and Django REST Framework. It allows authenticated users to create, retrieve, and interact with posts, comments, categories, and notifications. Real-time WebSocket support enables instant post notification delivery to connected clients. 
 
 ---
 
@@ -14,7 +14,7 @@ This project is a real-time blog API built with Django and Django REST Framework
 - Comments with threaded replies (nested structure)
 - DRF-powered backend with WebSocket integration via Django Channels
 - DRF-Unit tests with pytest
-- Swagger documentation. (https://tb.up.railway.app/api/docs/)
+- Swagger documentation.
 
 ---
 
@@ -27,7 +27,6 @@ This project is a real-time blog API built with Django and Django REST Framework
 - WebSockets (via Channels & Redis)
 - PostgreSQL or SQLite (you choose)
 - Pytest
-
 ---
 
 
